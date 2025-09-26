@@ -1,7 +1,6 @@
 use clap::{Parser, Subcommand};
 use saves_sync::config::Config;
 use saves_sync::utils;
-use std::error::Error;
 use std::io::Read;
 
 #[derive(Parser, Debug)]
@@ -15,9 +14,11 @@ struct Cli {
 enum Commands {
     Track,
     List,
+    Pull,
+    Push,
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
     let contents: String = match utils::get_config() {
         Ok(mut f) => {
             let mut contents: String = String::new();
@@ -37,9 +38,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             for i in config.list() {
                 println!("{}", i)
             }
-
-            Ok(())
         }
         Commands::Track => config.track(),
-    }
+        Commands::Pull => config.pull(),
+        Commands::Push => config.push(),
+    };
 }

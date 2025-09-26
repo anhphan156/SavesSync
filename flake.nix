@@ -27,12 +27,16 @@
           name = "SaveSync";
           src = ./.;
           cargoLock.lockFile = ./Cargo.lock;
+          nativeBuildInputs = with pkgs; [pkg-config];
+          buildInputs = with pkgs; [openssl];
         };
 
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             rust-toolchain
             rust-analyzer
+            openssl
+            pkg-config
           ];
         };
       }
