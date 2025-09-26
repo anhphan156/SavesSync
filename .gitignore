@@ -1,0 +1,8 @@
+.direnv
+.envrc
+result
+
+
+# Added by cargo
+
+/target
