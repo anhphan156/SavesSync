@@ -1,4 +1,7 @@
-use git2::{AutotagOption, Cred, FetchOptions, RebaseOptions, RemoteCallbacks, Repository};
+use git2::{
+    AutotagOption, Cred, FetchOptions, IndexAddOption, PushOptions, RebaseOptions, RemoteCallbacks,
+    Repository,
+};
 use serde::Deserialize;
 use std::{collections::HashMap, path::Path};
 
@@ -9,7 +12,17 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn push(&self) {}
+    pub fn push(&self) {
+        let repo = match Repository::open(Path::new(&self.general.repo)) {
+            Ok(r) => r,
+            Err(e) => panic!("Failed to open repo {}: {}", self.general.repo, e),
+        };
+
+        match Self::commit_push(&repo, "origin") {
+            Ok(_) => println!("Pushed successfully"),
+            Err(e) => println!("{}", e),
+        };
+    }
 
     pub fn pull(&self) {
         let repo = match Repository::open(Path::new(&self.general.repo)) {
@@ -87,6 +100,39 @@ impl Config {
         let file_type = metadata.file_type();
 
         Ok(predicate(file_type))
+    }
+
+    fn commit_push(repo: &Repository, remote_name: &str) -> Result<(), git2::Error> {
+        let mut index = repo.index()?;
+        index.add_all(["*"].iter(), IndexAddOption::DEFAULT, None)?;
+        index.write()?;
+
+        let tree_id = index.write_tree()?;
+        let tree = repo.find_tree(tree_id)?;
+
+        let parent_commit = repo.head()?.peel_to_commit()?;
+
+        let sig = repo.signature()?;
+
+        let commit_id = repo.commit(
+            Some("HEAD"),
+            &sig,
+            &sig,
+            "Game Sync",
+            &tree,
+            &[&parent_commit],
+        )?;
+
+        let mut callbacks = RemoteCallbacks::new();
+        callbacks.credentials(|_url, username, _allowed_types| {
+            Cred::ssh_key_from_agent(username.unwrap_or("git"))
+        });
+
+        let mut po = PushOptions::new();
+        po.remote_callbacks(callbacks);
+
+        let mut remote = repo.find_remote(remote_name)?;
+        remote.push(&["refs/heads/main:refs/heads/main"], Some(&mut po))
     }
 
     fn pull_rebase(repo: &Repository, remote_name: &str, branch: &str) -> Result<(), git2::Error> {
